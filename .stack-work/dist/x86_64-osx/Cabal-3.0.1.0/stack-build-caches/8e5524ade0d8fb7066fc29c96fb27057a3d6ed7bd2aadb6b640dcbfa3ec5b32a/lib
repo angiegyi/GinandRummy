@@ -1,0 +1,40 @@
+/Users/angiegyi/dev/Assignment2_121020-2128/src/Cards.hs:
+  hash: 1b734768116e9326587edc75e6db20ee93603940b117178ff9dc3ddc59e1be9e
+  size: 626
+  modtime: 1602496954
+/Users/angiegyi/dev/Assignment2_121020-2128/src/EitherIO.hs:
+  hash: 407543a4f2e353ee48548c52c04f3b094acd1355356677b31ce71d13f673eb3b
+  size: 839
+  modtime: 1602496954
+/Users/angiegyi/dev/Assignment2_121020-2128/src/Rummy/Play.hs:
+  hash: 687fe8552fea7a564d5af156713866f019055e5896cb3528d507ff504d7ffe52
+  size: 7037
+  modtime: 1602497248
+/Users/angiegyi/dev/Assignment2_121020-2128/src/Parser/Instances.hs:
+  hash: 1b81bbe457cf8d53c15ac33eb0056170aeac052a0796eff476cedbd5897ad510
+  size: 1897
+  modtime: 1602496954
+/Users/angiegyi/dev/Assignment2_121020-2128/src/Parser/Parser.hs:
+  hash: dcae6c7d3423045be7053553480619c4bab9a62a4e2a876272db1a029bc944a7
+  size: 1975
+  modtime: 1602496954
+/Users/angiegyi/dev/Assignment2_121020-2128/src/Rummy/Rules.hs:
+  hash: d7c8d2ede476b1628325cb16c8cd0b14a424866b63d7258b5d5fc9ab6ae59fe0
+  size: 3117
+  modtime: 1602496954
+/Users/angiegyi/dev/Assignment2_121020-2128/src/Deck.hs:
+  hash: 8a5075c4094f3f2345cf04a95d176b3836972c61bbba98a7c8dc652d92c03584
+  size: 680
+  modtime: 1602496954
+/Users/angiegyi/dev/Assignment2_121020-2128/rummy.cabal:
+  hash: 583e7400d24d694f9749c0584cdeaa44edf447297da929b5c422bb716690da91
+  size: 1743
+  modtime: 1602550766
+/Users/angiegyi/dev/Assignment2_121020-2128/package.yaml:
+  hash: 4dbe5eab7da8d8aa37d74c914fa150a8d28585a1d0d5cebc4de4338890ac957c
+  size: 1241
+  modtime: 1602496954
+/Users/angiegyi/dev/Assignment2_121020-2128/src/Rummy/Types.hs:
+  hash: 9bec2e152a63e4bf2c7d2ac0cf64480b78e5e41f102ce3cbfa251d00853dccfa
+  size: 4075
+  modtime: 1602497248

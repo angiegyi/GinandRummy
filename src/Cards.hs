@@ -5,15 +5,15 @@ import Control.DeepSeq
 
 -- | The four base suits
 data Suit = Spade | Club | Diamond | Heart
-  deriving (Eq, Ord, Enum, Bounded)
+  deriving (Eq, Ord, Enum, Bounded, Show)
 
 data Rank = Ace | Two | Three | Four | Five | Six | Seven | Eight | Nine | Ten
           | Jack | Queen | King
-  deriving (Eq, Ord, Enum, Bounded)
+  deriving (Eq, Ord, Enum, Bounded, Show)
 
 -- | A Card is a suit and a rank
 data Card = Card Suit Rank
-  deriving (Eq)
+  deriving (Eq, Show)
 
 instance NFData Card where
   rnf = rwhnf
