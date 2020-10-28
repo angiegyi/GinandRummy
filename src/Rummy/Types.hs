@@ -26,6 +26,7 @@ data Meld =
     | Straight3 Card Card Card -- 3 cards of same suit, sequential ranks
     | Straight4 Card Card Card Card -- 4 cards of same suit, sequential ranks
     | Straight5 Card Card Card Card Card -- 5 cards of same suit, sequential ranks
+  deriving (Show)
 
 instance NFData Meld where
   rnf = rwhnf

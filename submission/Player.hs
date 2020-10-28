@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 -- | This is the file you need to implement to complete the assignment. Remember
 -- to comment where appropriate, use generic types and have fun!
 
@@ -38,19 +39,28 @@ makeMelds = undefined
 -- | Function makes straights based on your current list of cards. 
 -- Input: takes in a list of cards: [Card] type
 -- Return: a boolean if a straight can be made 
-makeStraights :: [Card] -> Bool
-makeStraights = undefined
--- for each type of suit, run checkStraights
+makeStraights :: [Card] -> [Meld]
+makeStraights cards 
+    | length(cards) == 5 = [Straight5 (cards !! 0) (cards !! 1) (cards !! 2) (cards !! 3) (cards !! 4)]
+    | length(cards) == 4 = [Straight4 (cards !! 0) (cards !! 1) (cards !! 2) (cards !! 3)] 
+    | length(cards) == 3 = [Straight3 (cards !! 0) (cards !! 1) (cards !! 2)]
+    | length(cards) == 3 = [Straight3 (cards !! 0) (cards !! 1) (cards !! 2)]
+    | length(cards) == 2 = [Deadwood (cards !! 0), Deadwood (cards !! 1)]
+    | length(cards) == 2 = [Deadwood (cards !! 0), Deadwood (cards !! 1)]
 
 -- | Function checks straights for a particular suits 
 -- By getting all cards of a particular suit and checking if they're in order. 
+  -- it makes the best straight of your current cards 
 -- Input: takes in a list of cards: [Card] type
 -- Input: takes in a suit: Suit type
 -- Return: a list of cards of the specified Suit 
-checkStraights :: [Card] -> Suit -> [Card] 
-checkStraights cards suit = sortCards (getSuit (cards) (suit))
--- for each pair of card, if check consequtive is true, return an array with the cards 
+checkStraights :: [Card] -> [Card]
+checkStraights cards = undefined 
+  where 
+    suits = [Heart, Spade, Club, Diamond]
+    sameSuits = getSuit cards <$> suits
 -- given a suit, check if there are more than 4 consecutive cards and if so, return the cards that make that set
+-- get all cards of a given suit -> check 
 
 -- | Function checks the difference between the values of two cards 
 -- Input: takes in a list of cards: [Card] type
@@ -60,8 +70,22 @@ checkConsequtive (Card _ rank1) (Card _ rank2)
     | (rank1 == Jack && rank2 == Queen) || (rank2 == Jack && rank1 == Queen) = True 
     | (rank1 == Queen && rank2 == King) || (rank2 == Queen && rank1 == King) = True 
     | abs(fromEnum rank1 - fromEnum rank2) == 1 = True
-    | abs(fromEnum rank1 - fromEnum rank2) /= 1 = False 
+    | otherwise = False 
 
+-- | Recursive function that returns the card combination if its in order 
+-- Input: takes in a list of cards: [Card] type
+-- Return: a boolean if the two cards are consecutive cards 
+getConsequtiveCards:: [Card] -> [Card] -> [Card]
+getConsequtiveCards [x] acc = acc ++ [x]
+getConsequtiveCards (x:xs) acc = if (checkConsequtive x (head (xs))) then getConsequtiveCards (xs) (acc ++ [x]) else getConsequtiveCards (xs) []
+
+-- | Function that returns the largest straight that can be made with a hand of cards 
+formStraights:: [Card] -> [Card] -> [Card] -> [Card]
+formStraights [x] acc maxrun = maxrun ++ [x]
+formStraights (x:xs) acc maxrun = if (checkConsequtive x (last (xs))) && (length(acc ++ [x]) > length(maxrun)) then formStraights xs (acc ++ [x]) (acc ++ [x]) else formStraights xs [x] maxrun
+-- [(Card Heart Ace), (Card Heart Two), (Card Heart Three), (Card Heart Five), (Card Heart Six), (Card Heart Seven)] = [(Card Heart Five), (Card Heart Six), (Card Heart Seven)]
+-- acc = [two, three] maxrun = [two, three] x: five xs: six.. 
+-- 
 -- | Function that filters for a list of cards with the suit you want
 -- Input: takes in a list of cards and the suit you want: [Card] type, Suit type
 -- Return: returns a list of cards that are only of the suit you want: [Card] type
@@ -70,15 +94,17 @@ getSuit cards suitWanted = filter (\x -> cardToSuit x == suitWanted) cards
     
 --- Creating Sets ----
 
--- | Function makes straights based on your current list of cards. 
+-- | Function makes sets based on your current list of cards. 
 -- Input: takes in a list of cards: [Card] type
--- Return: a boolean if a set can be made 
-makeSets :: [Card] -> Bool
+-- Return: Meld of the set
+makeSets :: [Card] -> [Meld]
 makeSets cards 
-    | length (getClubs $ cards) > 3  = True
-    | length (getHearts $ cards) > 3 = True 
-    | length (getClubs $ cards) > 3 = True 
-    | length (getDiamonds $ cards) > 3 = True 
+    | length (checkSets card_set) == 3 = [Set3 (card_set !! 0) (card_set !! 1) (card_set !! 2)]
+    | length (checkSets card_set) == 4 = [Set4 (card_set !! 0) (card_set !! 1) (card_set !! 2) (card_set !! 3)]
+    | length (checkSets card_set) == 2 = [Deadwood (card_set !! 0),Deadwood (card_set !! 1)]
+    | otherwise = [Deadwood (card_set !! 0)]
+    where 
+      card_set = checkSets $ cards
 
 -- | Function makes the highest set based on your current list of cards. 
 -- By looking for cards with the same number 
@@ -101,7 +127,6 @@ checkSameRank cards rankWanted = filter (\x -> cardToRank x == rankWanted) cards
 -- | Function that finds the set with the highest score 
 --findHighestSet :: [[Card]] -> [Int]
 --findHighestSet options = calculateSetScore <$> options 
-
 findHighestSet :: [[Card]] -> [Card]
 findHighestSet cards = foldr1 (\x y ->if x >= y then x else y) cards
 
