@@ -40,27 +40,25 @@ makeMelds = undefined
 -- Input: takes in a list of cards: [Card] type
 -- Return: a boolean if a straight can be made 
 makeStraights :: [Card] -> [Meld]
-makeStraights cards 
+makeStraights c 
+    | length(cards) >  5 = [Straight5 (cards !! (length(cards)-5)) (cards !! (length(cards)-4)) (cards !! (length(cards)-3)) (cards !! (length(cards)-2)) (cards !! (length(cards)-1))]
     | length(cards) == 5 = [Straight5 (cards !! 0) (cards !! 1) (cards !! 2) (cards !! 3) (cards !! 4)]
     | length(cards) == 4 = [Straight4 (cards !! 0) (cards !! 1) (cards !! 2) (cards !! 3)] 
     | length(cards) == 3 = [Straight3 (cards !! 0) (cards !! 1) (cards !! 2)]
-    | length(cards) == 3 = [Straight3 (cards !! 0) (cards !! 1) (cards !! 2)]
-    | length(cards) == 2 = [Deadwood (cards !! 0), Deadwood (cards !! 1)]
-    | length(cards) == 2 = [Deadwood (cards !! 0), Deadwood (cards !! 1)]
+    | length(cards) == 2 = [Deadwood  (cards  !! 0), Deadwood (cards !! 1)]
+    | length(cards) == 1 = [Deadwood  (cards  !! 0)]
+    | length(cards) == 0 = []
 
--- | Function checks straights for a particular suits 
--- By getting all cards of a particular suit and checking if they're in order. 
-  -- it makes the best straight of your current cards 
--- Input: takes in a list of cards: [Card] type
--- Input: takes in a suit: Suit type
--- Return: a list of cards of the specified Suit 
-checkStraights :: [Card] -> [Card]
-checkStraights cards = undefined 
   where 
-    suits = [Heart, Spade, Club, Diamond]
-    sameSuits = getSuit cards <$> suits
--- given a suit, check if there are more than 4 consecutive cards and if so, return the cards that make that set
--- get all cards of a given suit -> check 
+      cards = sortCards (checkStraights1 $ c)
+
+checkStraights1 :: [Card] -> [Card]
+checkStraights1 cards = findHighestSet [heartSuits, spadeSuits, clubSuits, diamondSuits]
+  where 
+    heartSuits =  formStraights (getSuit cards Heart) [] []
+    spadeSuits =  formStraights (getSuit cards Spade) [] []
+    clubSuits =  formStraights (getSuit cards Club) [] []
+    diamondSuits =  formStraights (getSuit cards Club) [] []
 
 -- | Function checks the difference between the values of two cards 
 -- Input: takes in a list of cards: [Card] type
@@ -72,20 +70,27 @@ checkConsequtive (Card _ rank1) (Card _ rank2)
     | abs(fromEnum rank1 - fromEnum rank2) == 1 = True
     | otherwise = False 
 
--- | Recursive function that returns the card combination if its in order 
--- Input: takes in a list of cards: [Card] type
+-- | Function that returns the largest straight that can be made with a hand of cards 
+-- Input: takes in a list of cards of the same suit: [Card] type
 -- Return: a boolean if the two cards are consecutive cards 
-getConsequtiveCards:: [Card] -> [Card] -> [Card]
-getConsequtiveCards [x] acc = acc ++ [x]
-getConsequtiveCards (x:xs) acc = if (checkConsequtive x (head (xs))) then getConsequtiveCards (xs) (acc ++ [x]) else getConsequtiveCards (xs) []
+formStraightsSet:: [Card] -> [Card] -> [Card] -> [[Card]] -> [[Card]]
+formStraightsSet [x] _ maxrun res = if (checkConsequtive x (last(maxrun))) then res ++ [maxrun ++ [x]] else res ++ [maxrun]
+formStraightsSet (x:xs) [] [] [] = if (checkConsequtive x (head(xs))) then formStraightsSet xs [x] [x] [] else formStraightsSet xs [x] [] []
+formStraightsSet (x:xs) acc maxrun res = if (checkConsequtive x (last (acc))) && (length(acc ++ [x]) > length(maxrun)) 
+                                      then formStraightsSet xs (acc ++ [x]) (acc ++ [x]) res ++ [acc ++ [x]]  else formStraightsSet xs [x] maxrun []
 
 -- | Function that returns the largest straight that can be made with a hand of cards 
+-- Input: takes in a list of cards: [Card] type
+-- Return: A array of cards that make the highest straight
 formStraights:: [Card] -> [Card] -> [Card] -> [Card]
-formStraights [x] acc maxrun = maxrun ++ [x]
-formStraights (x:xs) acc maxrun = if (checkConsequtive x (last (xs))) && (length(acc ++ [x]) > length(maxrun)) then formStraights xs (acc ++ [x]) (acc ++ [x]) else formStraights xs [x] maxrun
--- [(Card Heart Ace), (Card Heart Two), (Card Heart Three), (Card Heart Five), (Card Heart Six), (Card Heart Seven)] = [(Card Heart Five), (Card Heart Six), (Card Heart Seven)]
--- acc = [two, three] maxrun = [two, three] x: five xs: six.. 
--- 
+formStraights [] [] [] = [] 
+formStraights [x] [] [] = []
+formStraights [x] acc maxrun = if (length(acc) == 0 || length(maxrun) == 0) then [] else if (checkConsequtive x (last(maxrun))) then maxrun ++ [x] else maxrun
+formStraights(x:xs) [] [] = if (checkConsequtive x (head(xs))) then formStraights xs [x] [x] else formStraights xs [x] []
+formStraights (x:xs) acc maxrun = if (checkConsequtive x (last(acc))) && (length(acc ++ [x]) > length(maxrun)) 
+                                    then formStraights xs (acc ++ [x]) (acc ++ [x]) 
+                                    else formStraights xs [x] maxrun
+
 -- | Function that filters for a list of cards with the suit you want
 -- Input: takes in a list of cards and the suit you want: [Card] type, Suit type
 -- Return: returns a list of cards that are only of the suit you want: [Card] type
@@ -118,6 +123,7 @@ checkSets cards = findHighestSet allRanks
     allRanks = filter (\x -> x /= [] && length(x) > 2) (sameRanks)
 
 -- find cards of the same value then check if they are of different suits 
+
 -- | Function that filters for a list of cards with the rank you want
 -- Input: takes in a list of cards and the rank you want: [Card] type, Rank type
 -- Return: returns a list of cards that are only of the rank you want: [Card] type
