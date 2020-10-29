@@ -7,58 +7,88 @@ module Player where
 import Parser.Parser -- This is the source for the parser from the course notes
 import Rummy.Types   -- Here you will find types used in the game of Rummy
 import Cards         -- Finally, the generic card type(s)
-import Data.List
-
+import Data.List ( filter, (\\), sortBy )
 
 -- You can add more imports if you need them
 
 -- | This card is called at the beginning of your turn, you need to decide which
 -- pile to draw from.
 pickCard :: ActionFunc 
-  -- -> Card          -- ^ card on top of the discard pile
-  -- -> Maybe String -- ^ player's memory, on first player turn it will be Nothing
-  -- -> Maybe Draw -- ^ opponent's chosen action, on first game turn it will be Nothing
-  -- -> [Card]       -- ^ the player's hand
-  -- -> (Draw, String) -- ^ which pile did the player chose to draw from
-pickCard cardTop memory draw card = undefined
+pickCard = undefined
 
 -- | This function is called once you have drawn a card, you need to decide
 -- which action to call.
 playCard :: PlayFunc
-playCard lastcard memory hand = undefined
+playCard = undefined
 
 -- | This function is called at the end of the game when you need to return the
 -- melds you formed with your last hand.
-makeMelds :: makeMelds
-makeMelds = undefined
+makeMelds :: MeldFunc
+makeMelds _ _ cards 
+   | length(straightCards) >= 3 = makeStraights cards ++ makeSets (filter (\x -> not (inList x straightCards)) cards)
+   | length(straightCards) == 0 && length(setCards) == 0 = []
+   | otherwise = makeSets cards ++ makeDeadWood (filter (\x -> not (inList x setCards)) cards)-- make the straights and create a set with the rest of the cards 
+  where 
+    straightCards = checkStraights cards -- is a list of cards that make up a straight 
+    setCards = checkSets cards -- is a list of cards that make up a set  
+
+-- | This function is called at the end of the game when you need to return the
+-- melds you formed with your last hand.
+makeMelds1 :: MeldFunc
+makeMelds1 _ _ cards 
+   | length(straightCards) >= 3 = makeStraights cards ++ makeSets cardsNotinStraights ++ makeDeadWood deadWoodCards
+   | length(straightCards) < 3 && length(setCards) == 0 = []
+   | otherwise = makeSets cards ++ makeDeadWood (filter (\x -> not (inList x setCards)) cards)-- make the straights and create a set with the rest of the cards 
+  where 
+    straightCards = checkStraights cards -- is a list of cards that make up a straight 
+    setCards = checkSets cards -- is a list of cards that make up a set  
+    cardsNotinStraights = (filter (\x -> not (inList x straightCards)) cards) -- these are the cards left after a straight is made 
+    setCardsNotFromStraight = checkSets cardsNotinStraights
+    deadWoodCards = filter (\x -> not ((inList x setCardsNotFromStraight) || (inList x straightCards))) cards
 
 -- My Functions ---------------------------------------------
 
---- Straights ----
+-- | Function converts each item in the list to deadwood 
+-- Input: takes in a list of cards: [Card] type
+-- Return: list of deadwood melds: [Meld] type
+makeDeadWood :: [Card] -> [Meld]
+makeDeadWood [] = []
+makeDeadWood cards = map (\x -> Deadwood x) cards
+
+-- | Checks if a card is in a list 
+-- Input: takes in a card and a list of cards: [Card] type
+-- Return: True if the card is in the list otherwise, False: Boolean type
+inList :: Card -> [Card] -> Bool
+inList _ [] = False
+inList card (x:xs) 
+    | card == x = True
+    | otherwise = inList card xs
+
+--- Straights ------------------------------------------------
 
 -- | Function makes straights based on your current list of cards. 
 -- Input: takes in a list of cards: [Card] type
--- Return: a boolean if a straight can be made 
+-- Return: a meld of straights: [Meld] type
 makeStraights :: [Card] -> [Meld]
 makeStraights c 
     | length(cards) >  5 = [Straight5 (cards !! (length(cards)-5)) (cards !! (length(cards)-4)) (cards !! (length(cards)-3)) (cards !! (length(cards)-2)) (cards !! (length(cards)-1))]
     | length(cards) == 5 = [Straight5 (cards !! 0) (cards !! 1) (cards !! 2) (cards !! 3) (cards !! 4)]
     | length(cards) == 4 = [Straight4 (cards !! 0) (cards !! 1) (cards !! 2) (cards !! 3)] 
     | length(cards) == 3 = [Straight3 (cards !! 0) (cards !! 1) (cards !! 2)]
-    | length(cards) == 2 = [Deadwood  (cards  !! 0), Deadwood (cards !! 1)]
-    | length(cards) == 1 = [Deadwood  (cards  !! 0)]
-    | length(cards) == 0 = []
-
+    | otherwise = makeDeadWood c
   where 
-      cards = sortCards (checkStraights1 $ c)
+      cards = (checkStraights $ c)
 
-checkStraights1 :: [Card] -> [Card]
-checkStraights1 cards = findHighestSet [heartSuits, spadeSuits, clubSuits, diamondSuits]
+-- | Function makes a list of cards that make up a straights based on your current list of cards. 
+-- Input: takes in a list of cards: [Card] type
+-- Return: a list of cards that make up a straight: [Card] type
+checkStraights :: [Card] -> [Card]
+checkStraights cards = findHighestSet [heartSuits, spadeSuits, clubSuits, diamondSuits]
   where 
-    heartSuits =  formStraights (getSuit cards Heart) [] []
-    spadeSuits =  formStraights (getSuit cards Spade) [] []
-    clubSuits =  formStraights (getSuit cards Club) [] []
-    diamondSuits =  formStraights (getSuit cards Club) [] []
+    heartSuits =  formStraights (sortCards (getSuit cards Heart)) [] []
+    spadeSuits =  formStraights (sortCards (getSuit cards Spade)) [] []
+    clubSuits =  formStraights  (sortCards (getSuit cards Club)) [] []
+    diamondSuits =  formStraights (sortCards (getSuit cards Club)) [] []
 
 -- | Function checks the difference between the values of two cards 
 -- Input: takes in a list of cards: [Card] type
@@ -71,20 +101,11 @@ checkConsequtive (Card _ rank1) (Card _ rank2)
     | otherwise = False 
 
 -- | Function that returns the largest straight that can be made with a hand of cards 
--- Input: takes in a list of cards of the same suit: [Card] type
--- Return: a boolean if the two cards are consecutive cards 
-formStraightsSet:: [Card] -> [Card] -> [Card] -> [[Card]] -> [[Card]]
-formStraightsSet [x] _ maxrun res = if (checkConsequtive x (last(maxrun))) then res ++ [maxrun ++ [x]] else res ++ [maxrun]
-formStraightsSet (x:xs) [] [] [] = if (checkConsequtive x (head(xs))) then formStraightsSet xs [x] [x] [] else formStraightsSet xs [x] [] []
-formStraightsSet (x:xs) acc maxrun res = if (checkConsequtive x (last (acc))) && (length(acc ++ [x]) > length(maxrun)) 
-                                      then formStraightsSet xs (acc ++ [x]) (acc ++ [x]) res ++ [acc ++ [x]]  else formStraightsSet xs [x] maxrun []
-
--- | Function that returns the largest straight that can be made with a hand of cards 
 -- Input: takes in a list of cards: [Card] type
 -- Return: A array of cards that make the highest straight
 formStraights:: [Card] -> [Card] -> [Card] -> [Card]
-formStraights [] [] [] = [] 
-formStraights [x] [] [] = []
+formStraights [] _ _ = [] 
+formStraights [_] [] [] = []
 formStraights [x] acc maxrun = if (length(acc) == 0 || length(maxrun) == 0) then [] else if (checkConsequtive x (last(maxrun))) then maxrun ++ [x] else maxrun
 formStraights(x:xs) [] [] = if (checkConsequtive x (head(xs))) then formStraights xs [x] [x] else formStraights xs [x] []
 formStraights (x:xs) acc maxrun = if (checkConsequtive x (last(acc))) && (length(acc ++ [x]) > length(maxrun)) 
@@ -107,7 +128,7 @@ makeSets cards
     | length (checkSets card_set) == 3 = [Set3 (card_set !! 0) (card_set !! 1) (card_set !! 2)]
     | length (checkSets card_set) == 4 = [Set4 (card_set !! 0) (card_set !! 1) (card_set !! 2) (card_set !! 3)]
     | length (checkSets card_set) == 2 = [Deadwood (card_set !! 0),Deadwood (card_set !! 1)]
-    | otherwise = [Deadwood (card_set !! 0)]
+    | otherwise = makeDeadWood cards
     where 
       card_set = checkSets $ cards
 
@@ -116,7 +137,9 @@ makeSets cards
 -- Input: takes in a list of cards: [Card] type
 -- Return: a list of cards of the specified Suit 
 checkSets :: [Card] -> [Card]
-checkSets cards = findHighestSet allRanks
+checkSets cards 
+    | allRanks == [] = [] 
+    | otherwise = findHighestSet allRanks
   where 
     ranks = [Ace, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King]
     sameRanks = checkSameRank cards <$> ranks
@@ -202,14 +225,7 @@ sortCards cards =  getClubs (sortCardsOnRank cards) ++ getDiamonds (sortCardsOnR
 -- Input: a list of cards: [Card] type
 -- Return: returns the maximum value card [Card] type
 findMaxCard :: [Card] -> Card
-findMaxCard cards = getLastElement (sortCardsOnRank(cards))
-
--- | Function that finds the maximum valued card from a sorted list of cards
--- Input: a list of cards: [Card] type
--- Return: returns the maximum value card [Card] type
-getLastElement:: [Card] -> Card
-getLastElement [x] = x 
-getLastElement (_:xs) = getLastElement xs 
+findMaxCard cards = last (sortCardsOnRank(cards))
 
 -- | Function that finds the maximum valued card from a sorted list of cards
 -- Input: a list of cards: [Card] type

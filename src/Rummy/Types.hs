@@ -26,7 +26,7 @@ data Meld =
     | Straight3 Card Card Card -- 3 cards of same suit, sequential ranks
     | Straight4 Card Card Card Card -- 4 cards of same suit, sequential ranks
     | Straight5 Card Card Card Card Card -- 5 cards of same suit, sequential ranks
-  deriving (Show)
+    deriving(Show)
 
 instance NFData Meld where
   rnf = rwhnf
@@ -51,8 +51,11 @@ instance Show GameError where
 data PlayerError = ReplayError
                  | InvalidCardError
                  | TimeError
+                 | MemoryError
+                 | CallError
                  | SetError
                  | StraightError
+                 | SuitError
                  | KnockError
                  | GinError
                  | OmitError
@@ -62,8 +65,11 @@ instance Show PlayerError where
   show ReplayError = "Cannot play the last drawn card"
   show InvalidCardError = "Card played wasn't in player's hand"
   show TimeError = "Took too long to play"
+  show MemoryError = "Memory is to large"
+  show CallError = "Called on first turn"
   show SetError = "All cards in a set must be of the same rank"
-  show StraightError = "All cards in a straight must be of the same suit"
+  show SuitError = "All cards in a straight must be of the same suit"
+  show StraightError = "All cards in a straight must be of consecutive ranks"
   show KnockError = "Knocked with more than 10 points in deadwood"
   show GinError = "Called gin with remaining deadwood"
   show OmitError = "Did not combine all cards into melds"
@@ -97,17 +103,19 @@ data HandResult = HandResult {
   scores :: [HandScore] -- ^ One score per player
 }
 
+type Score = Int
+
 instance Show HandResult where
   show (HandResult _ scores) = show scores
 
 data HandScore = HandScore {
   scoreId :: PlayerId,
-  score :: Int
+  score :: Score
 } deriving Show
 
 data GameScore = GameScore {
   player :: Player,
-  finalScore :: Int
+  finalScore :: Score
 }
 
 instance Show GameScore where
@@ -119,26 +127,30 @@ instance Show GameScore where
 -- A player receives the card he decided to draw (from discard or stock), her
 -- hand and her memory. She then choses whether to Knock or Discard.
 type PlayFunc
-  = Card              -- ^ last picked card
+  = Card              -- ^ picked card
+  -> (Score, Score)   -- ^ scores of (player, opponent) as of last round
   -> String           -- ^ the player's memory
-  -> [Card]           -- ^ the player's hand
-  -> (Action, String) -- ^ the player's chosen card and new state
+  -> [Card]           -- ^ the player's hand (without new card)
+  -> (Action, String) -- ^ the player's chosen card and new memory
 
 -- | Action function type.
 --
 -- This function is called at the beginning of a turn before the player has to
 -- form melds.
 type ActionFunc
-  = Card          -- ^ card on top of the discard pile
-  -> Maybe String -- ^ player's memory, on first player turn it will be Nothing
+  = Card            -- ^ card on top of the discard pile
+  -> (Score, Score) -- ^ scores of (player, opponent) as of last round
+  -> Maybe String
+  -- ^ player's memory, on first player turn in the first round it will be Nothing
   -> Maybe Draw -- ^ opponent's chosen action, on first game turn it will be Nothing
-  -> [Card]       -- ^ the player's hand
-  -> (Draw, String) -- ^ which pile did the player chose to draw from
+  -> [Card]     -- ^ the player's hand
+  -> (Draw, String) -- ^ which pile did the player chose to draw from and memory
 
 -- | Meld function type.
 --
 -- Which melds to use for scoring.
 type MeldFunc
-  = String  -- ^ the player's memory
-  -> [Card] -- ^ cards in player's hand
-  -> [Meld] -- ^ elected melds
+  = (Score, Score) -- ^ scores of (player, opponent) as of last round
+  -> String        -- ^ the player's memory
+  -> [Card]        -- ^ cards in player's hand
+  -> [Meld]        -- ^ elected melds
