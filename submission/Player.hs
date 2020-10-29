@@ -25,17 +25,6 @@ playCard = undefined
 -- melds you formed with your last hand.
 makeMelds :: MeldFunc
 makeMelds _ _ cards 
-   | length(straightCards) >= 3 = makeStraights cards ++ makeSets (filter (\x -> not (inList x straightCards)) cards)
-   | length(straightCards) == 0 && length(setCards) == 0 = []
-   | otherwise = makeSets cards ++ makeDeadWood (filter (\x -> not (inList x setCards)) cards)-- make the straights and create a set with the rest of the cards 
-  where 
-    straightCards = checkStraights cards -- is a list of cards that make up a straight 
-    setCards = checkSets cards -- is a list of cards that make up a set  
-
--- | This function is called at the end of the game when you need to return the
--- melds you formed with your last hand.
-makeMelds1 :: MeldFunc
-makeMelds1 _ _ cards 
    | length(straightCards) >= 3 = makeStraights cards ++ makeSets cardsNotinStraights ++ makeDeadWood deadWoodCards
    | length(straightCards) < 3 && length(setCards) == 0 = []
    | otherwise = makeSets cards ++ makeDeadWood (filter (\x -> not (inList x setCards)) cards)-- make the straights and create a set with the rest of the cards 
@@ -75,7 +64,7 @@ makeStraights c
     | length(cards) == 5 = [Straight5 (cards !! 0) (cards !! 1) (cards !! 2) (cards !! 3) (cards !! 4)]
     | length(cards) == 4 = [Straight4 (cards !! 0) (cards !! 1) (cards !! 2) (cards !! 3)] 
     | length(cards) == 3 = [Straight3 (cards !! 0) (cards !! 1) (cards !! 2)]
-    | otherwise = makeDeadWood c
+    | otherwise = []
   where 
       cards = (checkStraights $ c)
 
@@ -127,8 +116,7 @@ makeSets :: [Card] -> [Meld]
 makeSets cards 
     | length (checkSets card_set) == 3 = [Set3 (card_set !! 0) (card_set !! 1) (card_set !! 2)]
     | length (checkSets card_set) == 4 = [Set4 (card_set !! 0) (card_set !! 1) (card_set !! 2) (card_set !! 3)]
-    | length (checkSets card_set) == 2 = [Deadwood (card_set !! 0),Deadwood (card_set !! 1)]
-    | otherwise = makeDeadWood cards
+    | otherwise = []
     where 
       card_set = checkSets $ cards
 
