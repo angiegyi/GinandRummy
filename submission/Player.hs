@@ -3,7 +3,6 @@
 -- to comment where appropriate, use generic types and have fun!
 
 module Player where
-
 import Parser.Parser -- This is the source for the parser from the course notes
 import Rummy.Types   -- Here you will find types used in the game of Rummy
 import Cards         -- Finally, the generic card type(s)
@@ -32,8 +31,7 @@ makeMelds _ _ cards
     straightCards = checkStraights cards -- is a list of cards that make up a straight 
     setCards = checkSets cards -- is a list of cards that make up a set  
     cardsNotinStraights = (filter (\x -> not (inList x straightCards)) cards) -- these are the cards left after a straight is made 
-    setCardsNotFromStraight = checkSets cardsNotinStraights
-    deadWoodCards = filter (\x -> not ((inList x setCardsNotFromStraight) || (inList x straightCards))) cards
+    deadWoodCards = filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x straightCards))) cards -- checks for all cards not in any straight or set 
 
 -- My Functions ---------------------------------------------
 
