@@ -5,7 +5,7 @@
 module Player where
 import Parser.Parser () -- This is the source for the parser from the course notes
 import Rummy.Types
-    ( Act(Drop, Gin),
+    ( Act(Drop, Gin, Knock),
       Action(Action),
       ActionFunc,
       Meld(..),
@@ -20,6 +20,8 @@ import Data.Set ()
 -- pile to draw from.
 pickCard :: ActionFunc 
 pickCard = undefined
+  where
+    deckWithoutDiscard = undefined
 -- make a deck without the highest discard card
   -- make melds -> get deadwood -> find highest deadwood 
 -- check if score (deck ++ discard_card) > (og_deck) then discard else stock 
@@ -29,18 +31,13 @@ pickCard = undefined
 playCard :: PlayFunc
 playCard card score memory cards 
   | length(deadwoodCards) == 0 = (Action Gin card, "") 
-  | calculateSetScore (deadWoodCards) < 10 = (Action Gin card, "") 
+  | calculateSetScore (deadWoodCards) < 10 = (Action Knock card, "") 
   | otherwise = (Action Drop (chooseCardDiscard deadWoodCards), "")
   where 
     deadwoodCards = checkDeadWood melds
     melds = makeMelds score memory cards 
     cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
     deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards 
-
--- check if no deadwood are made -> then return gin 
--- get deadwood -> check if score of deadwood is < 10 -> call Knock
--- get deadwood -> get highest deadwood card -> call Discard 
--- check if its the first turn ie. memory = ("","") -> can only discard 
 
 -- this function filters a meld for non deadwood cards 
 checkDeadWood :: [Meld] -> [Meld]
