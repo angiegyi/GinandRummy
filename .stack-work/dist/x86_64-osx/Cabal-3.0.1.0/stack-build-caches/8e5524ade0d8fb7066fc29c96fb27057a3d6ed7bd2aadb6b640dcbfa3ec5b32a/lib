@@ -1,15 +1,15 @@
 /Users/angiegyi/dev/Assignment2_121020-2128/src/Cards.hs:
-  hash: 1b734768116e9326587edc75e6db20ee93603940b117178ff9dc3ddc59e1be9e
-  size: 626
-  modtime: 1602496954
+  hash: 473a06ae5497c6a6160b9b6a55368a6d50c7547baea9fbeee1a6004ddb1a9e8d
+  size: 644
+  modtime: 1603688692
 /Users/angiegyi/dev/Assignment2_121020-2128/src/EitherIO.hs:
   hash: 407543a4f2e353ee48548c52c04f3b094acd1355356677b31ce71d13f673eb3b
   size: 839
   modtime: 1602496954
 /Users/angiegyi/dev/Assignment2_121020-2128/src/Rummy/Play.hs:
-  hash: 687fe8552fea7a564d5af156713866f019055e5896cb3528d507ff504d7ffe52
-  size: 7037
-  modtime: 1602497248
+  hash: 547184a2203795440384177949c177034f52952a7fef6cd6f846d4b7932cb296
+  size: 8572
+  modtime: 1603926160
 /Users/angiegyi/dev/Assignment2_121020-2128/src/Parser/Instances.hs:
   hash: 1b81bbe457cf8d53c15ac33eb0056170aeac052a0796eff476cedbd5897ad510
   size: 1897
@@ -35,6 +35,6 @@
   size: 1241
   modtime: 1602496954
 /Users/angiegyi/dev/Assignment2_121020-2128/src/Rummy/Types.hs:
-  hash: 9bec2e152a63e4bf2c7d2ac0cf64480b78e5e41f102ce3cbfa251d00853dccfa
-  size: 4075
-  modtime: 1602497248
+  hash: 048f083f21f9ed65ad5836a275cc02504bd8f9a9ac2a4e23ea8f8c157e252df1
+  size: 4662
+  modtime: 1604046464

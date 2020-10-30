@@ -5,7 +5,7 @@
 module Player where
 import Parser.Parser () -- This is the source for the parser from the course notes
 import Rummy.Types
-    ( Act(Drop, Gin, Knock),
+    (Draw(Discard, Stock),  Act(Drop, Gin, Knock),
       Action(Action),
       ActionFunc,
       Meld(..),
@@ -19,14 +19,25 @@ import Data.Set ()
 -- | This card is called at the beginning of your turn, you need to decide which
 -- pile to draw from.
 pickCard :: ActionFunc 
-pickCard = undefined
+pickCard card score memory oppAction cards 
+   | calculateSetScore(deckWithoutDiscard ++ [card]) > calculateSetScore cards = (Discard, "")
+   | otherwise = (Stock, "")
   where
-    deckWithoutDiscard = undefined
+    deckWithoutDiscard = deckWithoutCard highestCard cards
+    highestCard = chooseCardDiscard deadWoodCards
+    cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
+    deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards 
+
 -- make a deck without the highest discard card
   -- make melds -> get deadwood -> find highest deadwood 
--- check if score (deck ++ discard_card) > (og_deck) then discard else stock 
+-- check if score (deck ++ discard_card) > (og_deck) then discard else sstock 
 
--- | This function is called once you have drawn a card, you need to decide
+-- this function filters the cards for all cards minus the highest deadwood 
+deckWithoutCard:: Card -> [Card] -> [Card]
+deckWithoutCard cardNotInclude cards = Data.List.filter (\x -> (x /= cardNotInclude)) cards 
+
+
+-- | This function is called once you have drawn a card, you need to decide 
 -- which action to call.
 playCard :: PlayFunc
 playCard card score memory cards 
