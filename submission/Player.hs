@@ -39,12 +39,16 @@ deckWithoutCard cardNotInclude cards = Data.List.filter (\x -> (x /= cardNotIncl
 
 -- | This function is called once you have drawn a card, you need to decide 
 -- which action to call.
+-- You cannot discard the card you just drew.
 playCard :: PlayFunc
-playCard card score memory cards 
-  | length(deadwoodCards) == 0 = (Action Gin card, "") 
-  | calculateSetScore (deadWoodCards) < 10 = (Action Knock card, "") 
-  | otherwise = (Action Drop (chooseCardDiscard deadWoodCards), "")
+playCard pickUpCard score memory cards 
+  | (length(deadwoodCards) == 0 && score /= (0,0)) = (Action Gin discardCard, "") 
+  | (calculateSetScore (deadWoodCards) < 10) && (score /= (0,0)) = (Action Knock discardCard, "") 
+  | discardCard == pickUpCard = (Action Drop (chooseCardDiscard cardsExcPickup), "")
+  | otherwise = (Action Drop (discardCard), "")
   where 
+    cardsExcPickup = deckWithoutCard pickUpCard deadWoodCards
+    discardCard = chooseCardDiscard deadWoodCards
     deadwoodCards = checkDeadWood melds
     melds = makeMelds score memory cards 
     cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
