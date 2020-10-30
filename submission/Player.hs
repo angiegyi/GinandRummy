@@ -3,22 +3,57 @@
 -- to comment where appropriate, use generic types and have fun!
 
 module Player where
-import Parser.Parser -- This is the source for the parser from the course notes
-import Rummy.Types   -- Here you will find types used in the game of Rummy
-import Cards         -- Finally, the generic card type(s)
-import Data.List ( filter, (\\), sortBy )
-
+import Parser.Parser () -- This is the source for the parser from the course notes
+import Rummy.Types
+    ( Act(Drop, Gin),
+      Action(Action),
+      ActionFunc,
+      Meld(..),
+      MeldFunc,
+      PlayFunc )   -- Here you will find types used in the game of Rummy
+import Cards ( Card(..), Rank(..), Suit(..) )         -- Finally, the generic card type(s)
+import Data.List ( filter, (\\), sortBy, map )
+import Data.Set () 
 -- You can add more imports if you need them
 
 -- | This card is called at the beginning of your turn, you need to decide which
 -- pile to draw from.
 pickCard :: ActionFunc 
 pickCard = undefined
+-- make a deck without the highest discard card
+  -- make melds -> get deadwood -> find highest deadwood 
+-- check if score (deck ++ discard_card) > (og_deck) then discard else stock 
 
 -- | This function is called once you have drawn a card, you need to decide
 -- which action to call.
 playCard :: PlayFunc
-playCard = undefined
+playCard card score memory cards 
+  | length(deadwoodCards) == 0 = (Action Gin card, "") 
+  | calculateSetScore (deadWoodCards) < 10 = (Action Gin card, "") 
+  | otherwise = (Action Drop (chooseCardDiscard deadWoodCards), "")
+  where 
+    deadwoodCards = checkDeadWood melds
+    melds = makeMelds score memory cards 
+    cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
+    deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards 
+
+-- check if no deadwood are made -> then return gin 
+-- get deadwood -> check if score of deadwood is < 10 -> call Knock
+-- get deadwood -> get highest deadwood card -> call Discard 
+-- check if its the first turn ie. memory = ("","") -> can only discard 
+
+-- this function filters a meld for non deadwood cards 
+checkDeadWood :: [Meld] -> [Meld]
+checkDeadWood cards = Data.List.filter (\x -> not (isDeadWood x)) cards 
+
+-- this function filters for the deadwood dcards  
+getDeadWood :: [Meld] -> [Meld]
+getDeadWood cards = Data.List.filter (\x -> (isDeadWood x)) cards 
+
+-- Function checks if a card is of type deadwood 
+isDeadWood :: Meld -> Bool
+isDeadWood (Deadwood _) = True 
+isDeadWood _ = False 
 
 -- | This function is called at the end of the game when you need to return the
 -- melds you formed with your last hand.
@@ -26,12 +61,12 @@ makeMelds :: MeldFunc
 makeMelds _ _ cards 
    | length(straightCards) >= 3 = makeStraights cards ++ makeSets cardsNotinStraights ++ makeDeadWood deadWoodCards
    | length(straightCards) < 3 && length(setCards) == 0 = []
-   | otherwise = makeSets cards ++ makeDeadWood (filter (\x -> not (inList x setCards)) cards)-- make the straights and create a set with the rest of the cards 
+   | otherwise = makeSets cards ++ makeDeadWood (Data.List.filter (\x -> not (inList x setCards)) cards)-- make the straights and create a set with the rest of the cards 
   where 
     straightCards = checkStraights cards -- is a list of cards that make up a straight 
     setCards = checkSets cards -- is a list of cards that make up a set  
-    cardsNotinStraights = (filter (\x -> not (inList x straightCards)) cards) -- these are the cards left after a straight is made 
-    deadWoodCards = filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x straightCards))) cards -- checks for all cards not in any straight or set 
+    cardsNotinStraights = (Data.List.filter (\x -> not (inList x straightCards)) cards) -- these are the cards left after a straight is made 
+    deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x straightCards))) cards -- checks for all cards not in any straight or set 
 
 -- My Functions ---------------------------------------------
 
@@ -40,7 +75,7 @@ makeMelds _ _ cards
 -- Return: list of deadwood melds: [Meld] type
 makeDeadWood :: [Card] -> [Meld]
 makeDeadWood [] = []
-makeDeadWood cards = map (\x -> Deadwood x) cards
+makeDeadWood cards = Data.List.map (\x -> Deadwood x) cards
 
 -- | Checks if a card is in a list 
 -- Input: takes in a card and a list of cards: [Card] type
@@ -103,7 +138,7 @@ formStraights (x:xs) acc maxrun = if (checkConsequtive x (last(acc))) && (length
 -- Input: takes in a list of cards and the suit you want: [Card] type, Suit type
 -- Return: returns a list of cards that are only of the suit you want: [Card] type
 getSuit :: [Card] -> Suit -> [Card]
-getSuit cards suitWanted = filter (\x -> cardToSuit x == suitWanted) cards
+getSuit cards suitWanted = Data.List.filter (\x -> cardToSuit x == suitWanted) cards
     
 --- Creating Sets ----
 
@@ -129,7 +164,7 @@ checkSets cards
   where 
     ranks = [Ace, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King]
     sameRanks = checkSameRank cards <$> ranks
-    allRanks = filter (\x -> x /= [] && length(x) > 2) (sameRanks)
+    allRanks = Data.List.filter (\x -> x /= [] && length(x) > 2) (sameRanks)
 
 -- find cards of the same value then check if they are of different suits 
 
@@ -137,7 +172,7 @@ checkSets cards
 -- Input: takes in a list of cards and the rank you want: [Card] type, Rank type
 -- Return: returns a list of cards that are only of the rank you want: [Card] type
 checkSameRank :: [Card] -> Rank -> [Card]
-checkSameRank cards rankWanted = filter (\x -> cardToRank x == rankWanted) cards
+checkSameRank cards rankWanted = Data.List.filter (\x -> cardToRank x == rankWanted) cards
 
 -- | Function that finds the set with the highest score 
 --findHighestSet :: [[Card]] -> [Int]
@@ -188,7 +223,7 @@ getSpades = Data.List.filter ((== Spade) . cardToSuit)
 -- Input: takes in a list of cards: [Card] type
 -- Return: returns a list of cards that are of the Diamond Suit: [Card] type
 getDiamonds :: [Card] -> [Card]
-getDiamonds =  filter ((== Diamond) . cardToSuit)
+getDiamonds =  Data.List.filter ((== Diamond) . cardToSuit)
 
 -- Sorting cards ------------------------------
 
