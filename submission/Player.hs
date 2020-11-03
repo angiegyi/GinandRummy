@@ -3,7 +3,8 @@
 -- to comment where appropriate, use generic types and have fun!
 
 module Player where
-import Parser.Parser () -- This is the source for the parser from the course notes
+import Parser.Parser -- This is the source for the parser from the course notes
+import Parser.Instances
 import Rummy.Types
     (Draw(Discard, Stock),  Act(Drop, Gin, Knock),
       Action(Action),
@@ -14,6 +15,8 @@ import Rummy.Types
 import Cards ( Card(..), Rank(..), Suit(..) )         -- Finally, the generic card type(s)
 import Data.List ( filter, (\\), sortBy, map )
 import Data.Set () 
+import Data.Char ( isDigit)
+
 -- You can add more imports if you need them
 
 -- | This card is called at the beginning of your turn, you need to decide which
@@ -27,6 +30,7 @@ pickCard card score memory oppAction cards
     highestCard = chooseCardDiscard deadWoodCards
     cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
     deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards 
+    
 
 -- make a deck without the highest discard card
   -- make melds -> get deadwood -> find highest deadwood 
@@ -40,6 +44,8 @@ deckWithoutCard cardNotInclude cards = Data.List.filter (\x -> (x /= cardNotIncl
 -- | This function is called once you have drawn a card, you need to decide 
 -- which action to call.
 -- You cannot discard the card you just drew.
+-- After having chosen where to draw a card from, your player will be called again with the drawn card. It will need to decide which card to discard and what to announce.
+-- The first argument, Card, is the card your player drew, it is not added to your hand directly. The last argument is your player’s hand. 
 playCard :: PlayFunc
 playCard pickUpCard score memory cards 
   | (length(deadwoodCards) == 0 && score /= (0,0)) = (Action Gin discardCard, "") 
@@ -266,3 +272,61 @@ findMaxCard cards = last (sortCardsOnRank(cards))
 chooseCardDiscard:: [Card] -> Card 
 chooseCardDiscard discardCards = findMaxCard (discardCards)
 
+--- Parser -------------------------
+-- the memory will store the number of turns 
+
+data Turns = Turn { turns :: Int , lastScore :: (Int, Int) } 
+-- turn, score 
+
+--show instance 
+instance Show Turns where 
+  show (Turn turns score) = show(turns) ++ "," ++ show (fst(score)) ++ "," ++ show (snd(score))
+
+-- these functions are from the week 11 lab
+list1 :: Parser a -> Parser [a]
+list1 p = do {
+    x <- p;
+    xs <- list (p);
+    return (x:xs)
+}
+
+list :: Parser a -> Parser [a]
+list p = list1 p ||| pure []
+
+digit :: Parser Char
+digit = P (parse (satisfy (isDigit)))
+
+satisfy :: (Char -> Bool) -> Parser Char
+satisfy f = P (\x -> if empty x then Error UnexpectedEof else if (f (head x)) then parse character x else Error (UnexpectedChar (head x)))
+    where
+        empty str = 0 == (length str)
+
+-- This function is a parser for the Turns data structure 
+parseTurns :: Parser Turns
+parseTurns = do 
+  turns <- list digit
+  _ <- is (',')
+  score1 <- list digit 
+  _ <- is (',')
+  score2 <- list digit
+  return (Turn (read turns :: Int) (read score1 :: Int, read score2:: Int))
+
+-- This function increments the turn of the game 
+incrementTurns :: Turns -> Turns 
+incrementTurns (Turn turns score) = Turn (turns + 1) score
+
+-- This function pattern to get the score 
+getParseResultScore :: ParseResult Turns -> (Int, Int) 
+getParseResultScore (Result _ (Turn _ lastScore)) = lastScore  
+
+-- This function pattern to get the turn data type 
+getParseResultTurns:: ParseResult Turns -> Int 
+getParseResultTurns (Result _ (Turn turns _))  = turns  
+
+-- This function pattern to get the score 1 
+getParseResultScore1 :: ParseResult Turns -> Int
+getParseResultScore1 (Result _ (Turn _ (score1, _))) = score1  
+
+-- This function pattern to get the score 2 
+getParseResultScore2 :: ParseResult Turns -> Int
+getParseResultScore2 (Result _ (Turn _ (_, score2))) = score2  
