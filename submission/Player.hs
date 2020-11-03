@@ -5,6 +5,9 @@
 module Player where
 import Parser.Parser -- This is the source for the parser from the course notes
 import Parser.Instances
+    ( ParseError(UnexpectedChar, UnexpectedEof),
+      ParseResult(..),
+      Parser(..) )
 import Rummy.Types
     (Draw(Discard, Stock),  Act(Drop, Gin, Knock),
       Action(Action),
@@ -22,19 +25,35 @@ import Data.Char ( isDigit)
 -- | This card is called at the beginning of your turn, you need to decide which
 -- pile to draw from.
 pickCard :: ActionFunc 
-pickCard card score memory oppAction cards 
-   | calculateSetScore(deckWithoutDiscard ++ [card]) > calculateSetScore cards = (Discard, "")
-   | otherwise = (Stock, "")
+pickCard card _ _ Nothing cards 
+   | calculateSetScore(deckWithoutDiscard ++ [card]) > calculateSetScore cards = (Discard, show(Turn 1 (0,0)))
+   | otherwise = (Stock, show(Turn 1 (0,0)))
+  where
+    deckWithoutDiscard = deckWithoutCard highestCard cards
+    highestCard = chooseCardDiscard deadWoodCards
+    cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
+    deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards
+
+pickCard card _ Nothing _ cards 
+   | calculateSetScore(deckWithoutDiscard ++ [card]) > calculateSetScore cards = (Discard, show(Turn 1 (0,0)))
+   | otherwise = (Stock, show(Turn 1 (0,0)))
+  where
+    deckWithoutDiscard = deckWithoutCard highestCard cards
+    highestCard = chooseCardDiscard deadWoodCards
+    cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
+    deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards  
+
+pickCard card score memory _ cards 
+   | calculateSetScore(deckWithoutDiscard ++ [card]) > calculateSetScore cards = (Discard, show(res))
+   | otherwise = (Stock, show(res))
   where
     deckWithoutDiscard = deckWithoutCard highestCard cards
     highestCard = chooseCardDiscard deadWoodCards
     cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
     deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards 
-    
-
--- make a deck without the highest discard card
-  -- make melds -> get deadwood -> find highest deadwood 
--- check if score (deck ++ discard_card) > (og_deck) then discard else sstock 
+    mem = parse parseTurns (toString memory)
+    res = if score == getParseResultScore mem then incrementTurns (resultToTurn mem) else resetTurns (resultToTurn mem)
+-- last line checks if its still the same round and increments the turn counter 
 
 -- this function filters the cards for all cards minus the highest deadwood 
 deckWithoutCard:: Card -> [Card] -> [Card]
@@ -48,8 +67,8 @@ deckWithoutCard cardNotInclude cards = Data.List.filter (\x -> (x /= cardNotIncl
 -- The first argument, Card, is the card your player drew, it is not added to your hand directly. The last argument is your player’s hand. 
 playCard :: PlayFunc
 playCard pickUpCard score memory cards 
-  | (length(deadwoodCards) == 0 && score /= (0,0)) = (Action Gin discardCard, "") 
-  | (calculateSetScore (deadWoodCards) < 10) && (score /= (0,0)) = (Action Knock discardCard, "") 
+  | (turns /= 1 && length(deadwoodCards) == 0) = (Action Gin discardCard, "") 
+  | (turns /= 1 && calculateSetScore (deadWoodCards) < 10) = (Action Knock discardCard, "") 
   | discardCard == pickUpCard = (Action Drop (chooseCardDiscard cardsExcPickup), "")
   | otherwise = (Action Drop (discardCard), "")
   where 
@@ -59,6 +78,13 @@ playCard pickUpCard score memory cards
     melds = makeMelds score memory cards 
     cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
     deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards 
+    mem = parse parseTurns memory
+    turns = getParseResultTurns (mem)
+
+-- Converts a maybe string to a string 
+toString:: Maybe String -> String 
+toString (Just x) = x 
+toString (Nothing) = ""
 
 -- this function filters a meld for non deadwood cards 
 checkDeadWood :: [Meld] -> [Meld]
@@ -78,7 +104,7 @@ isDeadWood _ = False
 makeMelds :: MeldFunc
 makeMelds _ _ cards 
    | length(straightCards) >= 3 = makeStraights cards ++ makeSets cardsNotinStraights ++ makeDeadWood deadWoodCards
-   | length(straightCards) < 3 && length(setCards) == 0 = []
+   | length(straightCards) < 3 && length(setCards) == 0 = makeDeadWood cards
    | otherwise = makeSets cards ++ makeDeadWood (Data.List.filter (\x -> not (inList x setCards)) cards)-- make the straights and create a set with the rest of the cards 
   where 
     straightCards = checkStraights cards -- is a list of cards that make up a straight 
@@ -201,7 +227,9 @@ findHighestSet cards = foldr1 (\x y ->if x >= y then x else y) cards
 -- | Function that calculates the score of a set 
 calculateSetScore :: [Card] -> Int 
 calculateSetScore [] = 0
-calculateSetScore (x:xs) = (fromEnum (cardToRank x)+1) + calculateSetScore xs
+calculateSetScore (x:xs) = (fromEnum (cardToRank x)) + calculateSetScore xs
+-- calculateSetScore [] = 0
+-- calculateSetScore (x:xs) = (fromEnum (cardToRank x)+1) + calculateSetScore xs
 
 -- Conversion Functions ------------------------------
 
@@ -315,18 +343,30 @@ parseTurns = do
 incrementTurns :: Turns -> Turns 
 incrementTurns (Turn turns score) = Turn (turns + 1) score
 
+resetTurns :: Turns -> Turns 
+resetTurns (Turn _ score) = Turn 1 score
+
 -- This function pattern to get the score 
 getParseResultScore :: ParseResult Turns -> (Int, Int) 
 getParseResultScore (Result _ (Turn _ lastScore)) = lastScore  
+getParseResultScore _ = (0,0)
 
 -- This function pattern to get the turn data type 
 getParseResultTurns:: ParseResult Turns -> Int 
 getParseResultTurns (Result _ (Turn turns _))  = turns  
+getParseResultTurns _ = 1
 
 -- This function pattern to get the score 1 
 getParseResultScore1 :: ParseResult Turns -> Int
 getParseResultScore1 (Result _ (Turn _ (score1, _))) = score1  
+getParseResultScore1 _ = 1
 
 -- This function pattern to get the score 2 
 getParseResultScore2 :: ParseResult Turns -> Int
 getParseResultScore2 (Result _ (Turn _ (_, score2))) = score2  
+getParseResultScore2 _ = 1
+
+-- This function pattern matches to get the turn object from the parse result 
+resultToTurn :: ParseResult Turns -> Turns 
+resultToTurn (Result _ turnObj ) = turnObj
+resultToTurn _ = Turn 1 (0,0)
