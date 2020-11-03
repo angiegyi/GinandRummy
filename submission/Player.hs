@@ -4,24 +4,13 @@
 
 module Player where
 import Parser.Parser -- This is the source for the parser from the course notes
-import Parser.Instances
-    ( ParseError(UnexpectedChar, UnexpectedEof),
-      ParseResult(..),
-      Parser(..) )
-import Rummy.Types
-    (Draw(Discard, Stock),  Act(Drop, Gin, Knock),
-      Action(Action),
-      ActionFunc,
-      Meld(..),
-      MeldFunc,
-      PlayFunc )   -- Here you will find types used in the game of Rummy
-import Cards ( Card(..), Rank(..), Suit(..) )         -- Finally, the generic card type(s)
+import Parser.Instances 
+import Rummy.Types   -- Here you will find types used in the game of Rummy
+import Cards         -- Finally, the generic card type(s)
 import Data.List ( filter, (\\), sortBy, map )
-import Data.Set () 
-import Data.Char ( isDigit)
+import Data.Char (isDigit)
 
 -- You can add more imports if you need them
-
 -- | This card is called at the beginning of your turn, you need to decide which
 -- pile to draw from.
 pickCard :: ActionFunc 
