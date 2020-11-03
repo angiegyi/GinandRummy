@@ -228,8 +228,6 @@ findHighestSet cards = foldr1 (\x y ->if x >= y then x else y) cards
 calculateSetScore :: [Card] -> Int 
 calculateSetScore [] = 0
 calculateSetScore (x:xs) = (fromEnum (cardToRank x)) + calculateSetScore xs
--- calculateSetScore [] = 0
--- calculateSetScore (x:xs) = (fromEnum (cardToRank x)+1) + calculateSetScore xs
 
 -- Conversion Functions ------------------------------
 
