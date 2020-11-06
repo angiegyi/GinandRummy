@@ -42,11 +42,6 @@ pickCard card score memory _ cards
     deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards 
     mem = parse parseTurns (toString memory)
     res = if score == getParseResultScore mem then incrementTurns (resultToTurn mem) else resetTurns (resultToTurn mem)
--- last line checks if its still the same round and increments the turn counter 
-
--- this function filters the cards for all cards minus the highest deadwood 
-deckWithoutCard:: Card -> [Card] -> [Card]
-deckWithoutCard cardNotInclude cards = Data.List.filter (\x -> (x /= cardNotInclude)) cards 
 
 
 -- | This function is called once you have drawn a card, you need to decide 
@@ -56,6 +51,7 @@ deckWithoutCard cardNotInclude cards = Data.List.filter (\x -> (x /= cardNotIncl
 -- The first argument, Card, is the card your player drew, it is not added to your hand directly. The last argument is your player’s hand. 
 playCard :: PlayFunc
 playCard pickUpCard score memory cards 
+  | (turns /= 1 && length(deadwoodCards) == 0 && snd score > fst score) = (Action Gin discardCard, "") 
   | (turns /= 1 && length(deadwoodCards) == 0) = (Action Gin discardCard, "") 
   | (turns /= 1 && calculateSetScore (deadWoodCards) < 10) = (Action Knock discardCard, "") 
   | discardCard == pickUpCard = (Action Drop (chooseCardDiscard cardsExcPickup), "")
@@ -70,36 +66,25 @@ playCard pickUpCard score memory cards
     mem = parse parseTurns memory
     turns = getParseResultTurns (mem)
 
--- Converts a maybe string to a string 
-toString:: Maybe String -> String 
-toString (Just x) = x 
-toString (Nothing) = ""
-
--- this function filters a meld for non deadwood cards 
-checkDeadWood :: [Meld] -> [Meld]
-checkDeadWood cards = Data.List.filter (\x -> not (isDeadWood x)) cards 
-
--- this function filters for the deadwood dcards  
-getDeadWood :: [Meld] -> [Meld]
-getDeadWood cards = Data.List.filter (\x -> (isDeadWood x)) cards 
-
--- Function checks if a card is of type deadwood 
-isDeadWood :: Meld -> Bool
-isDeadWood (Deadwood _) = True 
-isDeadWood _ = False 
-
 -- | This function is called at the end of the game when you need to return the
 -- melds you formed with your last hand.
 makeMelds :: MeldFunc
 makeMelds _ _ cards 
    | length(straightCards) >= 3 = makeStraights cards ++ makeSets cardsNotinStraights ++ makeDeadWood deadWoodCards
    | length(straightCards) < 3 && length(setCards) == 0 = makeDeadWood cards
-   | otherwise = makeSets cards ++ makeDeadWood (Data.List.filter (\x -> not (inList x setCards)) cards)-- make the straights and create a set with the rest of the cards 
+   | otherwise = makeSets cards ++ makeDeadWood cardsNotinSets
   where 
-    straightCards = checkStraights cards -- is a list of cards that make up a straight 
+    straightCards = getMaxStraight (checkStraights cards)
     setCards = checkSets cards -- is a list of cards that make up a set  
     cardsNotinStraights = (Data.List.filter (\x -> not (inList x straightCards)) cards) -- these are the cards left after a straight is made 
     deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x straightCards))) cards -- checks for all cards not in any straight or set 
+    cardsNotinSets = (Data.List.filter (\x -> not (inList x setCards)) cards)
+
+getMaxStraight :: [Card] -> [Card]
+getMaxStraight [] = [] 
+getMaxStraight cards 
+   | length(cards) > 5 = [(cards !! (length(cards)-5))] ++ [(cards !! (length(cards)-4))] ++ [(cards !! (length(cards)-3))] ++ [(cards !! (length(cards)-2))] ++ [(cards !! (length(cards)-1))]
+   | otherwise = cards
 
 -- My Functions ---------------------------------------------
 
@@ -118,6 +103,30 @@ inList _ [] = False
 inList card (x:xs) 
     | card == x = True
     | otherwise = inList card xs
+
+-- | This function filters the cards for all cards minus a given card
+-- Input: takes in a card and a list of cards: Card and [Card] type 
+-- Return: returns all cards which is the card not to include: Card type 
+deckWithoutCard:: Card -> [Card] -> [Card]
+deckWithoutCard cardNotInclude cards = Data.List.filter (\x -> (x /= cardNotInclude)) cards 
+
+-- Converts a maybe string to a string 
+toString:: Maybe String -> String 
+toString (Just x) = x 
+toString (Nothing) = ""
+
+-- this function filters a meld for non deadwood cards 
+checkDeadWood :: [Meld] -> [Meld]
+checkDeadWood cards = Data.List.filter (\x -> not (isDeadWood x)) cards 
+
+-- this function filters for the deadwood dcards  
+getDeadWood :: [Meld] -> [Meld]
+getDeadWood cards = Data.List.filter (\x -> (isDeadWood x)) cards 
+
+-- Function checks if a card is of type deadwood 
+isDeadWood :: Meld -> Bool
+isDeadWood (Deadwood _) = True 
+isDeadWood _ = False 
 
 --- Straights ------------------------------------------------
 
@@ -173,7 +182,7 @@ formStraights (x:xs) acc maxrun = if (checkConsequtive x (last(acc))) && (length
 getSuit :: [Card] -> Suit -> [Card]
 getSuit cards suitWanted = Data.List.filter (\x -> cardToSuit x == suitWanted) cards
     
---- Creating Sets ----
+--- Creating Sets ------------------------------------------------
 
 -- | Function makes sets based on your current list of cards. 
 -- Input: takes in a list of cards: [Card] type
