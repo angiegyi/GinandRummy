@@ -10,10 +10,16 @@ import Cards         -- Finally, the generic card type(s)
 import Data.List ( filter, (\\), sortBy, map )
 import Data.Char (isDigit)
 
--- You can add more imports if you need them
 -- | This card is called at the beginning of your turn, you need to decide which
 -- pile to draw from.
+-- Input: Card on top of the pile (Card)
+-- Input: The score (Int, Int)
+-- Input: Memory (String)
+-- Input: hand of cards [Card]
+-- Output: a tuple of the pile chosen, the memory (Draw, String)
+
 pickCard :: ActionFunc 
+-- pattern match to check if it is the first turn 
 pickCard card _ _ Nothing cards 
    | calculateSetScore(deckWithoutDiscard ++ [card]) > calculateSetScore cards = (Discard, show(Turn 1 (0,0)))
    | otherwise = (Stock, show(Turn 1 (0,0)))
@@ -21,8 +27,10 @@ pickCard card _ _ Nothing cards
     deckWithoutDiscard = deckWithoutCard highestCard cards
     highestCard = chooseCardDiscard deadWoodCards
     cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
-    deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards
+    deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || 
+                    (inList x (checkStraights cards)))) cards
 
+-- pattern match again to check if it is the first turn 
 pickCard card _ Nothing _ cards 
    | calculateSetScore(deckWithoutDiscard ++ [card]) > calculateSetScore cards = (Discard, show(Turn 1 (0,0)))
    | otherwise = (Stock, show(Turn 1 (0,0)))
@@ -32,6 +40,7 @@ pickCard card _ Nothing _ cards
     cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
     deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards  
 
+-- pattern match for every other turn
 pickCard card score memory _ cards 
    | calculateSetScore(deckWithoutDiscard ++ [card]) > calculateSetScore cards = (Discard, show(res))
    | otherwise = (Stock, show(res))
@@ -41,50 +50,60 @@ pickCard card score memory _ cards
     cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
     deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards 
     mem = parse parseTurns (toString memory)
-    res = if score == getParseResultScore mem then incrementTurns (resultToTurn mem) else resetTurns (resultToTurn mem)
-
+    res = if score == getParseResultScore mem 
+          then incrementTurns (resultToTurn mem) 
+          else resetTurns (resultToTurn mem)
 
 -- | This function is called once you have drawn a card, you need to decide 
 -- which action to call.
--- You cannot discard the card you just drew.
--- After having chosen where to draw a card from, your player will be called again with the drawn card. It will need to decide which card to discard and what to announce.
--- The first argument, Card, is the card your player drew, it is not added to your hand directly. The last argument is your player’s hand. 
+-- Input: the card which was picked up from either the discard or the stock (Card)
+-- Input: the score (Int, Int)
+-- Input: the memory (String)
+-- Input: your current hand of cards (Cards)
+-- Output: Action chosen, card to discard and the memory (Action, Card, String)
 playCard :: PlayFunc
 playCard pickUpCard score memory cards 
   | (turns /= 1 && length(deadwoodCards) == 0 && snd score > fst score) = (Action Gin discardCard, "") 
   | (turns /= 1 && length(deadwoodCards) == 0) = (Action Gin discardCard, "") 
-  | (turns /= 1 && calculateSetScore (deadWoodCards) < 10) = (Action Knock discardCard, "") 
-  | discardCard == pickUpCard = (Action Drop (chooseCardDiscard cardsExcPickup), "")
+  | (turns /= 1 && calculateSetScore (deadwoodCards) < 10) = (Action Knock discardCard, "") 
+  | discardCard == pickUpCard = (Action Drop discardCard, "")
   | otherwise = (Action Drop (discardCard), "")
   where 
-    cardsExcPickup = deckWithoutCard pickUpCard deadWoodCards
-    discardCard = chooseCardDiscard deadWoodCards
-    deadwoodCards = checkDeadWood melds
-    melds = makeMelds score memory cards 
-    cardsNotinStraights = (Data.List.filter (\x -> not (inList x (checkStraights cards))) cards)  
-    deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x (checkStraights cards)))) cards 
+    cardsIncPickup = (deckWithoutCard discardCard cards) ++ [pickUpCard]
+    discardCard = chooseCardDiscard cards
+    deadwoodCards = meldToCardList (getDeadWood melds) -- this is a meld 
+    melds = makeMelds score memory cardsIncPickup 
     mem = parse parseTurns memory
     turns = getParseResultTurns (mem)
 
 -- | This function is called at the end of the game when you need to return the
 -- melds you formed with your last hand.
+-- Input: the score (Int, Int)
+-- Input: the memory (String)
+-- Input: your current hand of cards (Cards)
+-- Output: a list of melds [Meld]
 makeMelds :: MeldFunc
 makeMelds _ _ cards 
    | length(straightCards) >= 3 = makeStraights cards ++ makeSets cardsNotinStraights ++ makeDeadWood deadWoodCards
    | length(straightCards) < 3 && length(setCards) == 0 = makeDeadWood cards
    | otherwise = makeSets cards ++ makeDeadWood cardsNotinSets
   where 
-    straightCards = getMaxStraight (checkStraights cards)
+    straightCards = meldToCardList (makeStraights cards) 
     setCards = checkSets cards -- is a list of cards that make up a set  
     cardsNotinStraights = (Data.List.filter (\x -> not (inList x straightCards)) cards) -- these are the cards left after a straight is made 
     deadWoodCards = Data.List.filter (\x -> not ((inList x (checkSets cardsNotinStraights)) || (inList x straightCards))) cards -- checks for all cards not in any straight or set 
     cardsNotinSets = (Data.List.filter (\x -> not (inList x setCards)) cards)
 
-getMaxStraight :: [Card] -> [Card]
-getMaxStraight [] = [] 
-getMaxStraight cards 
-   | length(cards) > 5 = [(cards !! (length(cards)-5))] ++ [(cards !! (length(cards)-4))] ++ [(cards !! (length(cards)-3))] ++ [(cards !! (length(cards)-2))] ++ [(cards !! (length(cards)-1))]
-   | otherwise = cards
+-- Function converts a meld to individual cards 
+-- Input: a meld: Meld type 
+-- Output: a list of cards that make up the melds: [Card] type
+meldToCard:: Meld -> [Card]
+meldToCard (Straight5 a b c d e) = [a] ++ [b] ++ [c] ++ [d] ++ [e]
+meldToCard (Straight4 a b c d) = [a] ++ [b] ++ [c] ++ [d] 
+meldToCard (Straight3 a b c) = [a] ++ [b] ++ [c]
+meldToCard (Deadwood c) = [c]
+meldToCard (Set3 c1 c2 c3) = [c1] ++ [c2] ++ [c3]     -- 3 cards of same rank different suit
+meldToCard (Set4 c1 c2 c3 c4) = [c1] ++ [c2] ++ [c3] ++ [c4]
 
 -- My Functions ---------------------------------------------
 
@@ -111,22 +130,42 @@ deckWithoutCard:: Card -> [Card] -> [Card]
 deckWithoutCard cardNotInclude cards = Data.List.filter (\x -> (x /= cardNotInclude)) cards 
 
 -- Converts a maybe string to a string 
+-- Input: takes in a string: String type
+-- Return: a list of melds excluding deadwood cards: [Card] 
 toString:: Maybe String -> String 
 toString (Just x) = x 
 toString (Nothing) = ""
 
 -- this function filters a meld for non deadwood cards 
+-- Input: takes in a list of melds: [Meld] type
+-- Return: a list of melds excluding deadwood cards: [Card] 
 checkDeadWood :: [Meld] -> [Meld]
 checkDeadWood cards = Data.List.filter (\x -> not (isDeadWood x)) cards 
 
--- this function filters for the deadwood dcards  
+-- this function filters for the deadwood cards  
+-- Input: takes in a list of cards: [Card] type
+-- Return: a boolean if the card is of type deadwood: Bool type
 getDeadWood :: [Meld] -> [Meld]
 getDeadWood cards = Data.List.filter (\x -> (isDeadWood x)) cards 
 
 -- Function checks if a card is of type deadwood 
+-- Input: takes in a list of cards: [Card] type
+-- Return: a boolean if the card is of type deadwood: Bool type
 isDeadWood :: Meld -> Bool
 isDeadWood (Deadwood _) = True 
 isDeadWood _ = False 
+
+-- Function converts a list of melds to a list of cards 
+-- Input: a list of melds: [Meld] type
+-- Return: a list of cards that make up the melds: [Card] type 
+meldToCardList:: [Meld] -> [Card]
+meldToCardList cards = foldList (Data.List.map(\x -> meldToCard x) cards) 
+
+-- Function flatterns a list
+-- Input: a double nested list to be flattened: [] 
+-- Return: a single that has been flattened: [Card] type 
+foldList:: [[Card]] -> [Card]
+foldList l = foldr (++) [] l
 
 --- Straights ------------------------------------------------
 
@@ -217,15 +256,18 @@ checkSameRank :: [Card] -> Rank -> [Card]
 checkSameRank cards rankWanted = Data.List.filter (\x -> cardToRank x == rankWanted) cards
 
 -- | Function that finds the set with the highest score 
---findHighestSet :: [[Card]] -> [Int]
---findHighestSet options = calculateSetScore <$> options 
+-- Input: takes in a list of cards: [[Card]] type
+-- Return: returns the set with the highest score: [Card]
 findHighestSet :: [[Card]] -> [Card]
 findHighestSet cards = foldr1 (\x y ->if x >= y then x else y) cards
 
--- | Function that calculates the score of a set 
+-- | Function that calculates the score of a hand 
+-- Input: takes in a list of cards: [Card] type
+-- Return: returns the score of the hand: Int type 
 calculateSetScore :: [Card] -> Int 
 calculateSetScore [] = 0
-calculateSetScore (x:xs) = (fromEnum (cardToRank x)) + calculateSetScore xs
+calculateSetScore [x] = fromEnum (cardToRank x) + 1 
+calculateSetScore (x:xs) = fromEnum (cardToRank x) + 1 + calculateSetScore xs
 
 -- Conversion Functions ------------------------------
 
